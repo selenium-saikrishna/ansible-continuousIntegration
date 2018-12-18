@@ -1,0 +1,70 @@
+---
+- name: Installing necessary s/w packages
+  hosts: all
+  tasks:
+   - name: Install s/w packages
+     apt: 
+      name: "{{item.a}}"
+      state: present
+      update_cache: "{{item.b}}"
+     with_items:
+      - {a: default-jdk,b: yes}
+      - {a: git,b: no}
+      - {a: maven,b: no}
+      - {a: tomcat7,b: yes}
+      - {a: tomcat7-admin,b: no}
+- name: Continuous Download and Build
+  hosts: devserver
+  tasks:
+   - name: download the code from github
+     git:
+      repo: https://github.com/selenium-saikrishna/maven.git
+      dest: /home/ubuntu/mygit
+   - name: Build the code
+     shell: cd /home/ubuntu/mygit;mvn package
+   - name: Fetch artifact from dev to controller
+     fetch:
+      src: /home/ubuntu/mygit/webapp/target/webapp.war
+      dest: /tmp
+- name: Continuous Deployment and Testing
+  hosts: qaserver
+  tasks:
+   - name: Copy artifact into tomcat on qaserver
+     copy: 
+      src: /tmp/172.31.37.35/home/ubuntu/mygit/webapp/target/webapp.war
+      dest: /var/lib/tomcat7/webapps/qaenv.war
+   - name: Download the Testing programs
+     git:
+      repo: https://github.com/selenium-saikrishna/TestingNew.git
+      dest: /home/ubuntu/testing-git
+   - name: Run the testing programs
+     shell: java -jar /home/ubuntu/testing-git/testing.jar
+     register: results
+   - name: display output of testingprograms
+     debug:
+      var: results
+- name: Continuous Delivery
+  hosts: prodserver
+  tasks:
+   - name: Copy the artifact into prodserver
+     copy:
+      src: /tmp/172.31.37.35/home/ubuntu/mygit/webapp/target/webapp.war
+      dest: /var/lib/tomcat7/webapps/prodenv.war
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+...
+ 
